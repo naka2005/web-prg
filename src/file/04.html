@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="UTF-8">
+        <title>ヒット＆ブロー</title>
+    </head>
+    <script>
+    var qNumber = new Array(4); // 問題
+    var aNumber = new Array(4); // 解答
+    var cnt = 0;                // 試行回数
+
+    function init() {
+        // 数字パネル
+                   document.getElementById("number").innerHTML = "";
+        for (var i=0; i<10; i++) {
+            var number = document.createElement("span");
+            number.innerText = i;
+            number.className = "yellow";
+            number.draggable = true;
+            number.ondragstart = dragNumber;
+            document.getElementById("number").appendChild(number);
+        }
+        // 解答用パネル
+        document.getElementById("answer").innerHTML = "";
+        for (var i=0; i<4; i++) {
+            var answer = document.createElement("span");
+            answer.id = "a_" + i;
+            answer.innerText = 0;
+            answer.ondragover = dragOverNumber;
+            answer.ondrop = dropNumber;
+            document.getElementById("answer").appendChild(answer);
+        }
+        // 問題作成
+        setQuestion();
+    }
+
+    function setQuestion() {
+        // 数字をシャッフル
+        var numbers = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        for (var i=9; i>0; i--) {
+            var j = Math.floor(Math.random()*i);
+            var tempNumber = numbers[i];
+            numbers[i] = numbers[j];
+            numbers[j] = tempNumber;
+        }
+        // 4桁の問題作成
+        for (var i=0; i<4; i++) qNumber[i] = numbers[i];
+    }
+
+    function dragNumber(event) {
+        // ドラッグした数字を格納
+        event.dataTransfer.setData("text", event.target.innerText);
+    }
+
+    function dropNumber(event) {
+        // 格納された数字を解答パネルにセット
+        var number = event.dataTransfer.getData("text");
+        event.target.innerText = number;
+        event.target.className = "";
+    }
+
+    function dragOverNumber(event) {
+        // 通常のドラッグ動作をキャンセル
+        event.preventDefault();
+    }
+
+    function check() {
+        // 解答の取得
+        var answer = "";
+        for (var i=0; i<4; i++) {
+            answer += document.getElementById("a_"+i).innerText;
+            aNumber[i] = Number(document.getElementById("a_"+i).innerText);
+        }
+        // ヒット＆ブロー判定
+        var hit = 0, blow = 0;
+        for (var i=0; i<4; i++) {
+            if (aNumber.indexOf(qNumber[i]) >= 0) {
+                if (aNumber[i] == qNumber[i]) {
+                    // ヒット
+                    hit++;
+                } else {
+                    // ブロー
+                    blow++;
+                }
+            }
+        }
+        // 背景色変更
+        var style = "red";
+        if (blow > 0) style = "magenta";
+        if (hit > 0) style = "cyan";
+        if (hit == 4) style = "green";
+        for (var i=0; i<4; i++) {
+            document.getElementById("a_"+i).className = style;
+        }
+        // ログ表示
+        cnt++;
+        var log = document.getElementById("log").innerHTML;
+        answer = cnt+"回目：[" + answer +"]：";
+        if (hit == 4) {
+            log = answer + "正解！<br>" + log;
+        } else {
+            log = answer + hit + "ヒット、" + blow + "ブロー<br>" + log;
+        }
+        document.getElementById("log").innerHTML = log;
+    }
+
+    function reset() {
+        // 解答回数、解答用パネル、ログのリセット
+        cnt = 0;
+        for (var i=0; i<4; i++) {
+            document.getElementById("a_"+i).innerText = 0;
+            document.getElementById("a_"+i).className = "";
+        }
+        document.getElementById("log").innerHTML = "";
+    }
+
+    function newQuestion() {
+        // 新しい問題をセット
+        reset();
+        setQuestion();
+    }
+    </script>
+    <style>
+    span {
+        margin: 5px;
+        padding: 0px 10px;
+        border: thin solid #CCCCCC;
+    }
+    #answer {font-size: 60px;}
+    #number {font-size: 40px;}
+    .red {background-color: #FFCCCC;}
+    .magenta {background-color: #FFCCFF;}
+    .cyan {background-color: #CCFFFF;}
+    .green {background-color: #CCFFCC;}
+    .yellow {background-color: #FFFFCC;}
+    </style>
+    <body onload="init()">
+    <p>ヒット＆ブロー</p>
+    <input type="button" value="新しい問題" onclick="newQuestion()">
+    <hr>
+    <div id="number"></div>
+    <hr>!Drag & Drop
+    <div id="answer"></div>
+    <hr>
+    <input type="button" value="判定" onclick="check()">
+    <input type="button" value="リセット" onclick="reset()">
+    <div id="log"></div>
+    </body>
+</html>

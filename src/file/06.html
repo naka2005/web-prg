@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>自動迷路作成</title>
+    <script>
+        var canvas, context, canvasRect;
+        var maze;
+        var size = 30, width = 25, height = 25;
+
+        function init() {
+            // キャンバスの取得
+            canvas = document.getElementById("maze");
+            context = canvas.getContext("2d");
+            // キャンバスのサイズを設定
+            canvas.width = window.innerWidth - 20;
+            canvas.height = window.innerHeight - 140;
+            // キャンバスの絶対座標を取得
+            canvasRect = canvas.getBoundingClientRect();
+
+            // 迷路の大きさをセット
+            setSize();
+        }
+
+        function setSize() {
+            // 迷路の大きさを変更(幅と高さは奇数に調整)
+            size = document.getElementById("size").value * 10;
+            width = Math.floor(canvas.width / size);
+            height = Math.floor(canvas.height / size);
+            if (width % 2 == 0) width--;
+            if (height % 2 == 0) height--;
+
+            // 2次元配列の生成
+            maze = new Array(width);
+            for (var x = 0; x < width; x++) maze[x] = new Array(height);
+
+            // 迷路の初期描画
+            initMaze();
+            drawMaze();
+        }
+
+        function initMaze() {
+            // 迷路を初期化
+            for (var y = 0; y < height; y++) {
+                for (var x = 0; x < width; x++) {
+                    // 壁(1)、柱(1)、通路(0)をセット
+                    if ((x == 0) || (x == width - 1) || (y == 0) || (y == height - 1)) {
+                        maze[x][y] = 1;
+                    } else if ((x % 2 == 0) && (y % 2 == 0)) {
+                        maze[x][y] = 1;
+                    } else {
+                        maze[x][y] = 0;
+                    }
+                }
+            }
+        }
+
+        function createMaze() {
+            // 迷路を初期化
+            initMaze();
+            // 迷路を作成
+            for (var y = 2; y < height - 2; y += 2) {
+                for (var x = 2; x < width - 2; x += 2) {
+                    if (y == 2) {
+                        // 1段目、上/下/右または上/下/左/右を塞ぐ
+                        if (maze[x - 1][y] == 1) {
+                            setBlock(x, y, ["up", "down", "right"]);
+                        } else {
+                            setBlock(x, y, ["up", "down", "left", "right"]);
+                        }
+                    } else {
+                        // 2段目以降:下/右または下/左/右を塞ぐ
+                        if (maze[x - 1][y] == 1) {
+                            setBlock(x, y, ["down", "right"]);
+                        } else {
+                            setBlock(x, y, ["down", "left", "right"]);
+                        }
+                    }
+                }
+            }
+            drawMaze();
+        }
+
+        function setBlock(x, y, dir) {
+            // 塞ぐ方向(ランダム)
+            var index = Math.floor(Math.random() * dir.length);
+            // 通路を塞ぎ壁にする
+            if (dir[index] == "up") {
+                maze[x][y - 1] = 1;
+            } else if (dir[index] == "down") {
+                maze[x][y + 1] = 1;
+            } else if (dir[index] == "left") {
+                maze[x - 1][y] = 1;
+            } else if (dir[index] == "right") {
+                maze[x + 1][y] = 1;
+            }
+        }
+
+        function drawMaze() {
+            // 通路を描画
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            for (var y = 0; y < height; y++) {
+                for (var x = 0; x < width; x++) {
+                    if (maze[x][y] == 1) {
+                        // 壁または柱
+                        context.fillStyle = "#003366";
+                    } else if (maze[x][y] == 2) {
+                        // 経路
+                        context.fillStyle = "#CCFFCC";
+                    } else {
+                        // 通路
+                        context.fillStyle = "#FFFFFF";
+                    }
+                    context.fillRect(x * size, y * size, size, size);
+                }
+            }
+            // スタートとゴールの描画
+            context.font = "bold " + size + "px arial";
+            context.textBaseline = "top";
+            context.textAlign = "center";
+            context.fillStyle = "#CC0000";
+            context.fillText("S", size + size / 2, size);
+            context.fillText("G", (width - 2) * size + size / 2, (height - 2) * size);
+        }
+
+        function drawRoute(event) {
+            // 迷路上の位置を取得
+            var x = Math.floor((event.clientX - canvasRect.left) / size);
+            var y = Math.floor((event.clientY - canvasRect.top) / size);
+            // 経路の描画
+            canvas.style.cursor = "default";
+            if (checkRoute(x, y)) {
+                canvas.style.cursor = "pointer";
+                maze[x][y] = 2;
+                drawMaze();
+            }
+        }
+
+        function checkRoute(x, y) {
+            // 経路チェック(上下左右が経路またはスタート地点)
+            var check = false;
+            if ((x > 0) && (x < width - 1) && (y > 0) && (y < height - 1)) {
+                if (maze[x][y - 1] == 2) check = true;
+                if (maze[x][y + 1] == 2) check = true;
+                if (maze[x - 1][y] == 2) check = true;
+                if (maze[x + 1][y] == 2) check = true;
+                if (maze[x][y] == 1) check = false;
+                if ((x == 1) && (y == 1)) check = true;
+            }
+            return check;
+        }
+
+        function clearRoute() {
+            // 経路をクリア
+            for (var y = 0; y < height; y++) {
+                for (var x = 0; x < width; x++) {
+                    if (maze[x][y] == 2) maze[x][y] = 0;
+                }
+            }
+            drawMaze();
+        }
+
+        function printMaze() {
+            // 迷路を印刷
+            clearRoute();
+            window.print();
+        }
+    </script>
+    <style>
+        @page { size: A4 landscape; }
+        @media print {
+            div { display: none; }
+            canvas { width: 297mm; }
+        }
+    </style>
+</head>
+<body onload="init()">
+    <p>自動迷路生成</p>
+    <div>
+        サイズ: <input type="range" id="size" value="3" min="1" max="5" onchange="setSize()">
+        <input type="button" value="迷路を作成" onclick="createMaze()">
+        <input type="button" value="経路をクリア" onclick="clearRoute()">
+        <input type="button" value="経路を印刷" onclick="printMaze()">
+    </div>
+    <hr>
+    <canvas id="maze" onmousemove="drawRoute(event)"></canvas>
+</body>
+</html>
