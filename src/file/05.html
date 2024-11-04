@@ -1,179 +1,194 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <title>ハノイの塔</title>
-    <script>
-        var canvas, context, canvasRect;  // キャンバス
-        var num, cnt;                    // 円盤の数、手数
-        var bar = new Array(3);          // 棒にセットされている円盤
-        var diskNo, diskX, diskY, barNo; // 選択されている円盤の番号、位置、棒
-        var mouseDown = false;           // マウスが押されているかどうか
-        var answer, index, timer;        // 解答、解答のインデックス、タイマー
-        var status = "manual";           // ステータス（manual/auto）
+    <head>
+        <meta charset="UTF-8" />
+        <title>ハノイの塔</title>
+        <script>
+            var canvas, context, canvasRect; // キャンバス
+            var num, cnt; // 円盤の数、手数
+            var bar = new Array(3); // 棒にセットされている円盤
+            var diskNo, diskX, diskY, barNo; // 選択されている円盤の番号、位置、棒
+            var mouseDown = false; // マウスが押されているかどうか
+            var answer, index, timer; // 解答、解答のインデックス、タイマー
+            var status = "manual"; // ステータス（manual/auto）
 
-        function init() {
-            // キャンバスの取得
-            canvas = document.getElementById("base");
-            context = canvas.getContext("2d");
-            canvasRect = canvas.getBoundingClientRect();
-            context.font = "20px Arial";
-            context.textAlign = "center";
-            context.textBaseline = "middle";
-            // 初期化
-            initDisk();
-        }
-
-        function initDisk() {
-            // 初期化
-            cnt = 0;
-            barNo = -1;
-            diskNo = -1;
-            document.getElementById("cnt").innerText = cnt;
-            document.getElementById("message").innerText = "";
-            status = "manual";
-            clearInterval(timer);
-            // STARTの棒にすべての円盤をセット
-            num = Number(document.getElementById("num").value);
-            bar = [[], [], []];
-            for (var i = num; i > 0; i--) {
-                bar[0].push(i);
+            function init() {
+                // キャンバスの取得
+                canvas = document.getElementById("base");
+                context = canvas.getContext("2d");
+                canvasRect = canvas.getBoundingClientRect();
+                context.font = "20px Arial";
+                context.textAlign = "center";
+                context.textBaseline = "middle";
+                // 初期化
+                initDisk();
             }
-            update();
-        }
 
-        function drawDisk(n, x, y) {
-            // 円盤の描画
-            var w = n * 20 + 20;
-            context.strokeStyle = "#000000";
-            context.fillStyle = "hsl(" + (n - 1) * 40 + ",100%,50%)";
-            context.fillRect(x - w / 2, y, w, 30);
-            context.fillStyle = "#000000";
-            context.fillText(n, x, y + 15);
-        }
-
-        function update() {
-            context.clearRect(0, 0, canvas.width, canvas.height);
-            // 棒の描画
-            var barName = ["START", "", "GOAL"];
-            for (var i = 0; i < 3; i++) {
-                context.fillStyle = "#996633";
-                context.fillRect(i * 250 + 140, 100, 20, 400);
-                context.fillRect(i * 250 + 70, 500, 160, 50);
-                context.fillStyle = "#FFFFFF";
-                context.fillText(barName[i], i * 250 + 150, 525);
-                // 円盤の描画
-                for (var j = 0; j < bar[i].length; j++) {
-                    var x = i * 250 + 150;
-                    var y = 500 - (j + 1) * 30;
-                    if (diskNo != bar[i][j]) drawDisk(bar[i][j], x, y);
-                }
-            }
-            // 移動中の円盤の描画
-            if (diskNo > -1) drawDisk(diskNo, diskX, diskY);
-            // クリア判定
-            if (bar[2].length == num) {
-                document.getElementById("message").innerText = "CLEAR!";
-            }
-        }
-
-        function startMove(event) {
-            // 円盤の移動開始
-            var x = event.clientX - canvasRect.left;
-            var y = event.clientY - canvasRect.top;
-            barNo = -1;
-            if ((x > 70) && (x < 230) && (y > 100) && (y < 550)) barNo = 0;
-            if ((x > 320) && (x < 480) && (y > 100) && (y < 550)) barNo = 1;
-            if ((x > 570) && (x < 730) && (y > 100) && (y < 550)) barNo = 2;
-            if ((barNo > -1) && (bar[barNo].length > 0) && (status == "manual")) {
-                mouseDown = true;
-                diskNo = bar[barNo][bar[barNo].length - 1];
-                diskX = x;
-                diskY = y;
-                update();
-            }
-        }
-
-        function move(event) {
-            // 円盤移動中
-            if (mouseDown) {
-                diskX = event.clientX - canvasRect.left;
-                diskY = event.clientY - canvasRect.top;
-                update();
-            }
-        }
-
-        function endMove(event) {
-            // 円盤の移動完了
-            mouseDown = false;
-            var x = event.clientX - canvasRect.left;
-            var y = event.clientY - canvasRect.top;
-            var newBarNo = -1;
-            if ((x > 70) && (x < 230) && (y > 100) && (y < 550)) newBarNo = 0;
-            if ((x > 320) && (x < 480) && (y > 100) && (y < 550)) newBarNo = 1;
-            if ((x > 570) && (x < 730) && (y > 100) && (y < 550)) newBarNo = 2;
-            if ((newBarNo > -1) && (diskNo > -1)) {
-                // 移動
-                if ((bar[newBarNo].length == 0) || ((bar[newBarNo].length > 0) && (diskNo < bar[newBarNo][bar[newBarNo].length - 1]))) {
-                    bar[barNo].pop();
-                    bar[newBarNo].push(diskNo);
-                    // 手数を更新
-                    cnt++;
-                    document.getElementById("cnt").innerText = cnt;
-                }
-            }
-            diskNo = -1;
-            update();
-        }
-
-        function hanoi(n, from, work, dest) {
-            // 解答の作成
-            if (n > 0) {
-                hanoi(n - 1, from, dest, work);
-                answer.push({ "n": n, "from": from, "dest": dest });
-                hanoi(n - 1, work, from, dest);
-            }
-        }
-
-        function showAnswer() {
-            // 解答作成
-            initDisk();
-            answer = [];
-            hanoi(num, 0, 1, 2);
-            // 円盤の移動
-            index = 0;
-            status = "auto";
-            timer = setInterval(moveDisk, 500);
-        }
-
-        function moveDisk() {
-            // 円盤の移動
-            if (index < answer.length) {
-                bar[answer[index].from].pop();
-                bar[answer[index].dest].push(answer[index].n);
-                update();
-                index++;
-                document.getElementById("cnt").innerText = index;
-            } else {
-                // 移動終了
-                clearInterval(timer);
+            function initDisk() {
+                // 初期化
+                cnt = 0;
+                barNo = -1;
+                diskNo = -1;
+                document.getElementById("cnt").innerText = cnt;
+                document.getElementById("message").innerText = "";
                 status = "manual";
+                clearInterval(timer);
+                // STARTの棒にすべての円盤をセット
+                num = Number(document.getElementById("num").value);
+                bar = [[], [], []];
+                for (var i = num; i > 0; i--) {
+                    bar[0].push(i);
+                }
+                update();
             }
-        }
-    </script>
-    <style>
-        input[type="number"] { width: 40px; }
-        #message { color: #CC0000; }
-    </style>
-</head>
-<body onload="init()">
-    <p>ハノイの塔</p>
-    <input type="button" value="解答" onclick="showAnswer()">
-    <input type="button" value="リセット" onclick="initDisk()">
-    円盤の数：
-    <input type="number" id="num" value="4" min="3" max="9" onchange="initDisk()">
-    手数：<span id="cnt">0</span> <span id="message"></span>
-    <hr>
-    <canvas id="base" width="800" height="600" onmousedown="startMove(event)" onmousemove="move(event)" onmouseup="endMove(event)" onmouseleave="endMove(event)"></canvas>
-</body>
+
+            function drawDisk(n, x, y) {
+                // 円盤の描画
+                var w = n * 20 + 20;
+                context.strokeStyle = "#000000";
+                context.fillStyle = "hsl(" + (n - 1) * 40 + ",100%,50%)";
+                context.fillRect(x - w / 2, y, w, 30);
+                context.fillStyle = "#000000";
+                context.fillText(n, x, y + 15);
+            }
+
+            function update() {
+                context.clearRect(0, 0, canvas.width, canvas.height);
+                // 棒の描画
+                var barName = ["START", "", "GOAL"];
+                for (var i = 0; i < 3; i++) {
+                    context.fillStyle = "#996633";
+                    context.fillRect(i * 250 + 140, 100, 20, 400);
+                    context.fillRect(i * 250 + 70, 500, 160, 50);
+                    context.fillStyle = "#FFFFFF";
+                    context.fillText(barName[i], i * 250 + 150, 525);
+                    // 円盤の描画
+                    for (var j = 0; j < bar[i].length; j++) {
+                        var x = i * 250 + 150;
+                        var y = 500 - (j + 1) * 30;
+                        if (diskNo != bar[i][j]) drawDisk(bar[i][j], x, y);
+                    }
+                }
+                // 移動中の円盤の描画
+                if (diskNo > -1) drawDisk(diskNo, diskX, diskY);
+                // クリア判定
+                if (bar[2].length == num) {
+                    document.getElementById("message").innerText = "CLEAR!";
+                }
+            }
+
+            function startMove(event) {
+                // 円盤の移動開始
+                var x = event.clientX - canvasRect.left;
+                var y = event.clientY - canvasRect.top;
+                barNo = -1;
+                if (x > 70 && x < 230 && y > 100 && y < 550) barNo = 0;
+                if (x > 320 && x < 480 && y > 100 && y < 550) barNo = 1;
+                if (x > 570 && x < 730 && y > 100 && y < 550) barNo = 2;
+                if (barNo > -1 && bar[barNo].length > 0 && status == "manual") {
+                    mouseDown = true;
+                    diskNo = bar[barNo][bar[barNo].length - 1];
+                    diskX = x;
+                    diskY = y;
+                    update();
+                }
+            }
+
+            function move(event) {
+                // 円盤移動中
+                if (mouseDown) {
+                    diskX = event.clientX - canvasRect.left;
+                    diskY = event.clientY - canvasRect.top;
+                    update();
+                }
+            }
+
+            function endMove(event) {
+                // 円盤の移動完了
+                mouseDown = false;
+                var x = event.clientX - canvasRect.left;
+                var y = event.clientY - canvasRect.top;
+                var newBarNo = -1;
+                if (x > 70 && x < 230 && y > 100 && y < 550) newBarNo = 0;
+                if (x > 320 && x < 480 && y > 100 && y < 550) newBarNo = 1;
+                if (x > 570 && x < 730 && y > 100 && y < 550) newBarNo = 2;
+                if (newBarNo > -1 && diskNo > -1) {
+                    // 移動
+                    if (
+                        bar[newBarNo].length == 0 ||
+                        (bar[newBarNo].length > 0 && diskNo < bar[newBarNo][bar[newBarNo].length - 1])
+                    ) {
+                        bar[barNo].pop();
+                        bar[newBarNo].push(diskNo);
+                        // 手数を更新
+                        cnt++;
+                        document.getElementById("cnt").innerText = cnt;
+                    }
+                }
+                diskNo = -1;
+                update();
+            }
+
+            function hanoi(n, from, work, dest) {
+                // 解答の作成
+                if (n > 0) {
+                    hanoi(n - 1, from, dest, work);
+                    answer.push({ n: n, from: from, dest: dest });
+                    hanoi(n - 1, work, from, dest);
+                }
+            }
+
+            function showAnswer() {
+                // 解答作成
+                initDisk();
+                answer = [];
+                hanoi(num, 0, 1, 2);
+                // 円盤の移動
+                index = 0;
+                status = "auto";
+                timer = setInterval(moveDisk, 500);
+            }
+
+            function moveDisk() {
+                // 円盤の移動
+                if (index < answer.length) {
+                    bar[answer[index].from].pop();
+                    bar[answer[index].dest].push(answer[index].n);
+                    update();
+                    index++;
+                    document.getElementById("cnt").innerText = index;
+                } else {
+                    // 移動終了
+                    clearInterval(timer);
+                    status = "manual";
+                }
+            }
+        </script>
+        <style>
+            input[type="number"] {
+                width: 40px;
+            }
+            #message {
+                color: #cc0000;
+            }
+        </style>
+    </head>
+    <body onload="init()">
+        <p>ハノイの塔</p>
+        <input type="button" value="解答" onclick="showAnswer()" />
+        <input type="button" value="リセット" onclick="initDisk()" />
+        円盤の数：
+        <input type="number" id="num" value="4" min="3" max="9" onchange="initDisk()" />
+        手数：<span id="cnt">0</span> <span id="message"></span>
+        <hr />
+        <canvas
+            id="base"
+            width="800"
+            height="600"
+            onmousedown="startMove(event)"
+            onmousemove="move(event)"
+            onmouseup="endMove(event)"
+            onmouseleave="endMove(event)"
+        ></canvas>
+    </body>
 </html>

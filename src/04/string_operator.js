@@ -1,2 +1,2 @@
-const a = 'Java' + 'Script';
+const a = "Java" + "Script";
 console.log(a);
