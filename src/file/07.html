@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="UTF-8">
+        <title>箱入り娘</title>
+        <script>
+        var num = 0;                // 手数
+        var status = "ready";       // ステータス（ready/move/end）
+        var sx, sy, target;         // 移動開始座標，移動するターゲット
+        var yuka = new Array();     // 床
+        var pos = new Array();      // コマの位置
+
+        // コマデータ（ラベル，スタイル，X, Y, 幅，高さ）
+        var koma = [["娘","L",1,0,2,2],["父親","M",0,0,1,2],["母親","M",3,0,1,2],
+            ["祖父","M",0,2,1,2],["祖母","M",3,2,1,2],["兄弟","M",1,2,2,1],
+            ["華道","S",1,3,1,1],["茶道","S",2,3,1,1],["和裁","S",0,4,1,1],
+            ["書道","S",3,4,1,1]];
+        
+        function init() {
+            // コマの配置
+            for (var i = 0; i < koma.length; i++) {
+                // ボタンを作成
+                var button = document.createElement("button");
+                button.id = "koma_" + i;
+                button.innerText = koma[i][0];
+                button.className = koma[i][1];
+                button.style.left = koma[i][2] * 100 + "px";
+                button.style.top = koma[i][3] * 100 + "px";
+                button.style.width = koma[i][4] * 100 + "px";
+                button.style.height = koma[i][5] * 100 + "px";
+                button.onmousedown = startMove;
+                button.onmouseleave = move;
+                document.getElementById("hako").appendChild(button);
+                // コマの位置をセット
+                pos[i] = [koma[i][2], koma[i][3]];
+            }
+            // 床の初期化
+            updateYuka();
+        }
+
+        function updateYuka() {
+            // 4x5の二次元配列に0をセット
+            for (var x = 0; x < 4; x++) yuka[x] = [0, 0, 0, 0, 0];
+            // コマの位置に1をセット
+            for (var i = 0; i < koma.length; i++) {
+                for (var dx = 0; dx < koma[i][4]; dx++) {
+                    for (var dy = 0; dy < koma[i][5]; dy++) {
+                        yuka[pos[i][0] + dx][pos[i][1] + dy] = 1;
+                    }
+                }
+            }
+        }
+
+        function startMove(event) {
+            // 移動開始
+            sx = event.clientX;
+            sy = event.clientY;
+            target = event.target;
+            if (status == "ready") status = "move";
+        }
+
+        function move(event) {
+            // 移動
+            if (status == "move") {
+                var dx = event.clientX - sx;
+                var dy = event.clientY - sy;
+                var index = target.id.split("_")[1];
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    // 横方向の移動
+                    if (checkMove(index, dx / Math.abs(dx), 0)) {
+                        pos[index][0] += dx / Math.abs(dx);
+                        target.style.left = pos[index][0] * 100 + "px";
+                        num++;
+                    }
+                } else {
+                    // 縦方向の移動
+                    if (checkMove(index, 0, dy / Math.abs(dy))) {
+                        pos[index][1] += dy / Math.abs(dy);
+                        target.style.top = pos[index][1] * 100 + "px";
+                        num++;
+                    }
+                }
+                updateYuka();
+                document.getElementById("num").innerText = num;
+                status = "ready";
+            }
+            // クリア
+            if ((pos[0][0] == 1) && (pos[0][1] == 3)) {
+                document.getElementById("message").innerText = "クリア！";
+                status = "end";
+            }
+        }
+
+        function checkMove(index, dirX, dirY) {
+            // 移動チェック
+            var check = true;
+            var tx1 = Number(pos[index][0] + dirX);
+            var ty1 = Number(pos[index][1] + dirY);
+            var tx2 = tx1 + koma[index][4] - 1;
+            var ty2 = ty1 + koma[index][5] - 1;
+
+            // 箱の外チェック
+            if ((tx1 < 0) || (tx1 > 3) || (ty1 < 0) || (ty1 > 4) || (tx2 < 0) || (tx2 > 3) || (ty2 < 0) || (ty2 > 4)) {
+                check = false;
+            }
+            // コマチェック
+            if (dirX == 1) {
+                if ((yuka[tx2][ty1] == 1) || yuka[tx2][ty2] == 1) {
+                    check = false;
+                }
+            } else if (dirX == -1) {
+                if ((yuka[tx1][ty1] == 1) || yuka[tx1][ty2] == 1) {
+                    check = false;
+                }
+            } else if (dirY == 1) {
+                if ((yuka[tx1][ty2] == 1) || yuka[tx2][ty2] == 1) {
+                    check = false;
+                }
+            } else if (dirY == -1) {
+                if ((yuka[tx1][ty1] == 1) || yuka[tx2][ty1] == 1) {
+                    check = false;
+                }
+            }
+            return check;
+        }
+
+        function resetKoma() {
+            // コマを初期位置に戻す
+            for (var i = 0; i < koma.length; i++) {
+                pos[i] = [koma[i][2], koma[i][3]];
+                var button = document.getElementById("koma_" + i);
+                button.style.left = pos[i][0] * 100 + "px";
+                button.style.top = pos[i][1] * 100 + "px";
+            }
+            // 床のリセット
+            updateYuka();
+            // 手数，メッセージのリセット
+            num = 0;
+            document.getElementById("num").innerText = num;
+            document.getElementById("message").innerText = "";
+            status = "ready";
+        }
+        </script>
+        <style>
+        #hako {
+            position: relative;
+            width: 400px;
+            height: 500px;
+            border: 10px ridge #cc9966;
+            background-color: #cccc99;
+        }
+        button {
+            font-family: "游明朝","ヒラギノ明朝 ProN W6","HG明朝E","ＭＳ Ｐ明朝";
+            position: absolute;
+            border: 2px outset #cc9933;
+            border-radius: 10px;
+            background-color: #ffdd99;
+            user-select: none;
+            -ms-user-select: none;
+        }
+        .L { font-size: 60px; }
+        .M { font-size: 30px; }
+        .S { font-size: 24px; }
+        #exit {
+            position: absolute;
+            text-align: center;
+            width: 200px;
+            height: 10px;
+            top: 500px;
+            left: 100px;
+            background-color: #cccc99;
+        }
+        #message { color: #cc0000; }
+        </style>
+    </head>
+    <body onload="init()">
+        <p>箱入り娘</p>
+        <input type="button" value="やりなおし" onclick="resetKoma()">
+        手数：<span id="num">0</span>　<span id="message"></span>
+        <hr>
+        <div id="hako">
+            <div id="exit">出口</div>
+        </div>
+    </body>
+</html>

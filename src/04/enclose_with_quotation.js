@@ -1,1 +1,1 @@
-console.log(typeof 'false');
+console.log(typeof "false");

@@ -1,1 +1,1 @@
-console.log(typeof 'abc');
+console.log(typeof "abc");

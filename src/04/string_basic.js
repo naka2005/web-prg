@@ -1,8 +1,8 @@
-const a = 'Hello world';
+const a = "Hello world";
 console.log(a);
 
-const b = 'こんにちは';
+const b = "こんにちは";
 console.log(b);
 
-console.log('Alice');
-console.log('Bob');
+console.log("Alice");
+console.log("Bob");

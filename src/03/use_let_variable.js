@@ -1,5 +1,5 @@
-let price = 100;
+const price = 100;
 console.log(price);
 
-let name = 'Arice';
+const name = "Arice";
 console.log(name);
