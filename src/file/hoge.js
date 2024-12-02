@@ -1,121 +1,139 @@
-const current = Array.from({ length: 25 });
-const question = Array.from({ length: 25 });
-const answer = Array.from({ length: 25 });
-const select = Array.from({ length: 25 }); // 現在のライト（点灯：1，消灯：-1）
-// 問題（点灯：1，消灯：-1）
-// 解答（未選択：1，選択：-1）
-// 選択状況（未選択：1，選択：-1）
+let canvas, context; // キャンバス
+const [goal, view] = [500, 50]; // ゴール位置、視界の長さ
+let [px, pz, speed] = [0, 0, 0]; // プレイヤーの位置、速度
+let startTime = 0;
+let timer; // 開始時間、タイマー
+let status = "ready"; // ステータス（ready/start）
+// コースデータ（0：直進、+：右カーブ、-：左カーブ）
+const course = [];
+const courseData = [0, 0.3, 0, -0.3, 0, 0.5, -0.5, 0.5, 0, 0];
+
 function init() {
-    // マスの作成
-    document.getElementById("game").innerHTML = "";
-    for (let x = 0; x < 5; x++) {
-        for (let y = 0; y < 5; y++) {
-            const masu = document.createElement("div");
-            masu.id = `masu_${x + y * 5}`;
-            masu.style.top = `${y * 104}px`;
-            masu.style.left = `${x * 104}px`;
-            masu.onclick = selectMasu;
-            masu.innerHTML = "&#x1f4a1;";
-            masu.className = "on";
-            document.getElementById("game").appendChild(masu);
-        }
+    // キャンバスの取得
+    canvas = document.getElementById("course");
+    context = canvas.getContext("2d");
+    // キーイベントの登録
+    document.addEventListener("keydown", move);
+    // レコードタイムの読み込み
+    const record = localStorage.getItem("race");
+    if (record != null)
+        document.getElementById("record").innerText = record;
+    // コースの作成
+    for (let i = 0; i < goal + view; i++) {
+        const index = Math.floor((i / goal) * courseData.length);
+        const p = Math.floor(Math.random() * 50);
+        course[i] = [0, 0];
+        if (i < goal)
+            course[i] = [courseData[index], p];
     }
-    // 現在のライト，選択状況の初期化
-    for (let i = 0; i < 25; i++) {
-        current[i] = 1;
-        select[i] = 1;
-    }
-    // 解答の作成
-    for (let j = 0; j < 25; j++) {
-        answer[j] = Math.floor(Math.random() * 2) * 2 - 1;
-        if (answer[j] == -1) {
-            // ライトを反転
-            changeLights(j % 5, Math.floor(j / 5));
-        }
-    }
-    // 問題を格納
-    for (let k = 0; k < 25; k++) {
-        question[k] = current[k];
-    }
-    // メッセージのクリア
+    // 初期描画
+    update();
+}
+
+function startGame() {
+    // 初期化
+    [px, pz, speed] = [0, 0, 0];
+    document.getElementById("start").disabled = true;
+    document.getElementById("time").innerText = "--.--";
+    document.getElementById("record").classList.remove("red");
     document.getElementById("message").innerText = "";
+    update();
+    // カウントダウン開始
+    startTime = Date.now();
+    timer = setInterval(countdown, 20);
 }
-function resetQuestion() {
-    // 問題のリセット
-    for (let i = 0; i < 25; i++) {
-        current[i] = question[i];
-        select[i] = 1;
-        const masu = document.getElementById(`manu_${i}`);
-        masu.classList.remove("hint");
-        if (question[i] == 1) {
-            // 点灯
-            masu.classList.remove("off");
-            masu.classList.add("on");
-            masu.innerHTML = "&#x1f4a1;";
+
+function countdown() {
+    // カウントダウン
+    const time = 3 - Math.floor((Date.now() - startTime) / 1000);
+    if (time == 0) {
+        // スタート
+        status = "start";
+        startTime = Date.now();
+        clearInterval(timer);
+        timer = setInterval(update, 20);
+    }
+    // カウントダウンの描画
+    update();
+    drawText(time);
+    // スピードの表示
+    document.getElementById("speed").value = speed;
+}
+
+function update() {
+    // 更新
+    if (speed > 1)
+        speed = 1;
+    if (status == "start")
+        pz += speed;
+    // コースの描画
+    const [cw, ch] = [canvas.width, canvas.height];
+    context.fillStyle = "#333399";
+    context.fillRect(0, 0, cw, ch);
+    const cz = Math.floor(pz);
+    let [r1, r2, ox, oy, ow] = [0, 0, 0, 0, 0];
+    for (let i = cz; i < cz + view; i++) {
+        // カーブ
+        r1 += course[i][0] / 10;
+        r2 += r1;
+        px -= (speed * r1) / 1000;
+        // 疑似3Dコースの中心座標、道幅
+        const scale = 1 / (i - cz);
+        const x = cw / 2 - Math.floor(((px - r2) * scale * cw) / 2);
+        const y = ch / 2 + Math.floor((scale * ch) / 2);
+        const w = Math.floor(cw * scale * 1.5);
+
+        // 描画
+        if (i != cz) {
+            let [c1, c2] = ["#009900", "#CCCCCC"];
+            if (i % 2 == 1)
+                [c1, c2] = ["#339900", "#CC0000"];
+            let [c3, c4, c5] = ["#333333", "#333333", "#3366CC"];
+            if (i % 3 == 0)
+                c4 = "#CCCCCC";
+            if (i > goal - 1 && i < goal + 3) {
+                [c3, c4] = ["#CCCC00", "#CCCC00"];
+            }
+            drawTrapezoid(cw / 2, oy, cw, cw / 2, y, cw, c1);
+            drawTrapezoid(ox, oy, ow * 1.2, x, y, w * 1.2, c2);
+            drawTrapezoid(ox, oy, ow, x, y, w, c3);
+            drawTrapezoid(ox, oy, ow * 0.05, x, y, w * 0.05, c4);
         }
-        else {
-            // 消灯
-            masu.classList.remove("on");
-            masu.classList.add("off");
-            masu.innerHTML = "";
-        }
+        [ox, oy, ow] = [x, y, w];
     }
-    // メッセージのクリア
-    document.getElementById("message").innerText = "";
-}
-function selectMasu(event) {
-    // マスのインデックスを取得
-    const index = Number(event.target.id.split("_")[1]);
-    // 選択処理
-    select[index] *= -1;
-    event.target.classList.remove("hint");
-    // ライトの反転
-    changeLights(index % 5, Math.floor(index / 5));
-    // クリア判定
-    if (!current.includes(-1)) {
-        document.getElementById("message").innerText = "CLEAR!";
-    }
-    else {
-        document.getElementById("message").innerText = "";
+
+    // ゴール判定
+    if (pz > goal) {
+        status = "ready";
+        drawText("GOAL!");
+        clearInterval(timer);
+        document.getElementById("start").disabled = false;
     }
 }
-function changeLights(x, y) {
-    // 自身のライトを反転
-    switchLights(x, y);
-    // 上下左右のライトを反転
-    if (x > 0)
-        switchLights(x - 1, y);
-    if (x < 4)
-        switchLights(x + 1, y);
-    if (y > 0)
-        switchLights(x, y - 1);
-    if (y < 4)
-        switchLights(x, y + 1);
+
+function drawTrapezoid(x1, y1, w1, x2, y2, w2, color) {
+    context.fillStyle = color;
+    context.beginPath();
+    context.moveTo(x1 - w1 / 2, y1);
+    context.lineTo(x1 + w1 / 2, y1);
+    context.lineTo(x2 + w2 / 2, y2);
+    context.lineTo(x2 - w2 / 2, y2);
+    context.fill();
 }
-function switchLights(x, y) {
-    // ライトを反転
-    const index = x + y * 5;
-    current[index] *= -1;
-    const masu = document.getElementById(`masu_${index}`);
-    if (current[index] == 1) {
-        // 点灯
-        masu.classList.remove("off");
-        masu.classList.add("on");
-        masu.innerHTML = "&#x1f4a1;";
-    }
-    else {
-        // 消灯
-        masu.classList.remove("on");
-        masu.classList.add("off");
-        masu.innerHTML = "";
-    }
+
+function drawText(text) {
+    context.font = "bold 100px sans-serif";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillStyle = "#FF0000";
+    context.fillText(text, canvas.width / 2, canvas.height / 4);
 }
-function showAnswer() {
-    // 解答の表示
-    for (let i = 0; i < 25; i++) {
-        const masu = document.getElementById(`masu_${i}`);
-        if ((answer[i] == -1 && select[i] == 1) || (answer[i] == 1 && select[i] == -1)) {
-            masu.classList.add("hint");
-        }
-    }
+
+function move(event) {
+    if (event.key == "ArrowUp")
+        speed += 0.01;
+    if (status == "start" && event.key == "ArrowLeft")
+        px -= 0.5;
+    if (status == "start" && event.key == "ArrowRight")
+        px += 0.5;
 }

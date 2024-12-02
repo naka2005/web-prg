@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="ja">
+    <head>
+        <meta charset="UTF-8" />
+        <title>色読みゲーム</title>
+        <script>
+            var num, maxTime; // 問題番号、制限時間
+            var qType; // 問題タイプ（色：0、読み：1）
+            var kIndex, cIndex; // 漢字インデックス、色インデックス
+            var startTime, timer1, timer2; // 開始時間、タイマー
+            var remaining, message; // 残り時間、メッセージエリア
+
+            // 色データ
+            var colors = [
+                ["赤", "#FF0000"],
+                ["緑", "#00FF00"],
+                ["青", "#0000FF"],
+                ["黄", "#FFFF00"],
+                ["水色", "#00FFFF"],
+                ["紫", "#FF00FF"],
+                ["白", "#FFFFFF"],
+            ];
+
+            function init() {
+                // 残り時間、メッセージエリアの取得
+                remaining = document.getElementById("remaining");
+                message = document.getElementById("message");
+
+                // 色選択ボタンの作成
+                for (var i = 0; i < colors.length; i++) {
+                    var button = document.createElement("button");
+                    button.id = "color_" + i;
+                    button.style.backgroundColor = colors[i][1];
+                    button.onclick = selectColor;
+                    document.getElementById("buttonArea").appendChild(button);
+                }
+                // 色選択ボタンの無効化
+                disableButton(true);
+            }
+
+            function disableButton(disabled) {
+                // 色選択ボタンの無効化／有効化
+                var buttons = document.getElementsByTagName("button");
+                for (var i = 0; i < buttons.length; i++) {
+                    buttons[i].disabled = disabled;
+                }
+            }
+
+            function setColor() {
+                // 問題を作成
+                document.getElementById("num").innerText = num + 1;
+                message.innerText = "";
+                // 色または読みをセット
+                qType = Math.floor(Math.random() * 2);
+                var question = document.getElementById("question");
+                if (qType == 0) {
+                    question.innerText = "色は？";
+                } else {
+                    question.innerText = "読みは？";
+                }
+                // 漢字と色をセット
+                kIndex = Math.floor(Math.random() * colors.length);
+                cIndex = Math.floor(Math.random() * (colors.length - 1)) + 1;
+                cIndex = (kIndex + cIndex) % colors.length;
+                var kanji = document.getElementById("kanji");
+                kanji.innerText = colors[kIndex][0];
+                kanji.style.color = colors[cIndex][1];
+
+                // 色選択ボタンの有効化
+                disableButton(false);
+            }
+
+            function startGame() {
+                // １問目を表示
+                num = 0;
+                setColor();
+                // 開始
+                maxTime = 5;
+                startTime = Date.now();
+                timer1 = setInterval(countTime, 100);
+                // スタートボタンの無効化
+                document.getElementById("start").disabled = true;
+            }
+
+            function stopGame() {
+                // 停止
+                clearInterval(timer1);
+                // スタートボタンの有効化
+                document.getElementById("start").disabled = false;
+                // 色選択ボタンの無効化
+                disableButton(true);
+            }
+
+            function selectColor(event) {
+                // 判定
+                var color = event.target.id.split("_")[1];
+                var checkAnswer = false;
+                if (qType == 0 && color == cIndex) {
+                    // 色、正解
+                    checkAnswer = true;
+                } else if (qType == 1 && color == kIndex) {
+                    // 読み、正解
+                    checkAnswer = true;
+                }
+                // 正解／不正解処理
+                if (checkAnswer) {
+                    // 正解。次の問題へ
+                    message.innerText = "正解！！";
+                    // 一時停止
+                    clearInterval(timer1);
+                    // 色選択ボタンの無効化
+                    disableButton(true);
+                    // 2秒後に次の問題を表示
+                    timer2 = setTimeout(function () {
+                        // 次の問題を表示
+                        num++;
+                        setColor();
+                        // 制限時間の変更
+                        maxTime -= 0.2;
+                        if (maxTime < 2) maxTime = 2;
+                        // 再開
+                        startTime = Date.now();
+                        timer1 = setInterval(countTime, 100);
+                    }, 2000);
+                } else {
+                    // 不正解、ゲームオーバー
+                    message.innerText = "間違い！ゲームオーバー！！";
+                    stopGame();
+                }
+            }
+
+            function countTime() {
+                // 残り時間の表示
+                var time = (maxTime - (Date.now() - startTime) / 1000).toFixed(3);
+                remaining.innerText = time;
+                // 時間切れ、ゲームオーバー
+                if (time < 0) {
+                    remaining.innerText = "0.000";
+                    message.innerText = "時間切れ！ゲームオーバー！！";
+                    stopGame();
+                }
+            }
+        </script>
+        <style>
+            #questionArea {
+                text-align: center;
+                width: 500px;
+                background-color: #000000;
+            }
+            #question {
+                padding-top: 10px;
+                color: #ffffff;
+            }
+            #kanji {
+                font-size: 80px;
+                font-weight: bold;
+            }
+            #buttonArea {
+                text-align: center;
+                width: 500px;
+                background-color: #999999;
+            }
+            button {
+                margin: 5px;
+                width: 60px;
+                height: 60px;
+            }
+            #message {
+                color: #cc0000;
+            }
+        </style>
+    </head>
+    <body onload="init()">
+        <p>色読みゲーム</p>
+        <input type="button" id="start" value="スタート" onclick="startGame()" />
+        【第<span id="num">1</span>問】残り時間：<span id="remaining">---</span>
+        <span id="message"></span>
+        <hr />
+        <div id="questionArea">
+            <div id="question"></div>
+            <div id="kanji"></div>
+        </div>
+        <div id="buttonArea"></div>
+    </body>
+</html>
