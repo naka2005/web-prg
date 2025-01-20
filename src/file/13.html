@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ja">
+    <head>
+        <meta charset="UTF-8" />
+        <title>二値化加工</title>
+        <script>
+            let canvas, context; // キャンバス
+            const image = new Image(); // 画像
+
+            function init() {
+                // キャンバスの取得
+                canvas = document.getElementById("image");
+                context = canvas.getContext("2d");
+            }
+            function loadImage(e) {
+                // 画像の読み込み
+                image.src = URL.createObjectURL(e.files[0]);
+                image.onload = function () {
+                    // 描画
+                    drawImage();
+                };
+            }
+            function drawImage() {
+                // キャンバスをクリア
+                context.clearRect(0, 0, canvas.width, canvas.height);
+                // キャンバスにあわせて画像を描画
+                let dx, dy, dw, dh;
+                if (image.width > image.height) {
+                    // 横長画像
+                    dw = canvas.width;
+                    dh = (dw * image.height) / image.width;
+                    dx = 0;
+                    dy = (canvas.height - dh) / 2;
+                } else {
+                    // 縦長画像
+                    dw = (canvas.height * image.width) / image.height;
+                    dh = image.height;
+                    dx = (canvas.width - dw) / 2;
+                    dy = 0;
+                }
+                context.drawImage(image, 0, 0, image.width, image.height, dx, dy, dw, dh);
+            }
+
+            function halftone() {
+                // ハーフトーン加工
+                binarization("dot");
+            }
+
+            function binarization(shape = "tile") {
+                // 閾値、サイズを取得
+                const t = Number(document.getElementById("t").value);
+                let size = Number(document.getElementById("size").value);
+                if (shape == "dot") size += 2;
+                // 画像データを取得
+                drawImage();
+                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                // 画像を加工
+                context.clearRect(0, 0, canvas.width, canvas.height);
+                for (let y = 0; y < canvas.height; y += size) {
+                    for (let x = 0; x < canvas.width; x += size) {
+                        // 色の平均化
+                        const rgba = getColorAverage(imageData, x, y, size);
+                        // 輝度を取得
+                        const l = 0.299 * rgba[0] + 0.587 * rgba[1] + 0.114 * rgba[2];
+                        // 描画
+                        context.fillStyle = `rgba(0,0,0,${rgba[3]})`;
+                        context.beginPath();
+                        if (shape == "tile") {
+                            // 二値判定（矩形の描画）
+                            if (l < t) context.rect(x, y, size, size);
+                        } else if (shape == "dot") {
+                            // ハーフトーン加工（輝度をドットの半径に変換）
+                            const r = size - (l / 256) * size;
+                            // 円の描画
+                            context.arc(x + size / 2, y + size / 2, r, 0, 2 * Math.PI);
+                        }
+                        context.fill();
+                    }
+                }
+            }
+            function getColorAverage(imageData, x, y, size) {
+                // ピクセルのRGBAを取得
+                let index;
+                let r = 0;
+                let g = 0;
+                let b = 0;
+                let a = 0;
+                let maxX = size;
+                let maxY = size;
+                if (x + size > canvas.width) maxX = canvas.width - x;
+                if (y + size > canvas.height) maxY = canvas.height - y;
+                for (let dy = 0; dy < maxY; dy++) {
+                    for (let dx = 0; dx < maxX; dx++) {
+                        index = (x + dx + (y + dy) * canvas.width) * 4;
+                        r += imageData.data[index];
+                        g += imageData.data[index + 1];
+                        b += imageData.data[index + 2];
+                        a += imageData.data[index + 3];
+                    }
+                }
+                // 平均化
+                r /= size * size;
+                g /= size * size;
+                b /= size * size;
+                a /= size * size;
+                if (a < 255) a = 0;
+                // RGBの平均値を返す
+                return [r, g, b, a];
+            }
+            function saveImage() {
+                // 画像に名前をつけて保存（ダウンロード）
+                const filename = window.prompt("ファイル名を入力してください", "image.png");
+                if (filename != null) {
+                    if (canvas.msToBlob) {
+                        // msToBlobを使用できるブラウザ
+                        const blob = canvas.msToBlob();
+                        window.navigator.msSaveBlob(blob.filename);
+                    } else {
+                        // それ以外のブラウザ
+                        const a = document.createElement("a");
+                        a.href = canvas.toDataURL("image/png");
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    }
+                }
+            }
+        </script>
+        <style>
+            canvas {
+                border: thin solid #cccccc;
+            }
+        </style>
+    </head>
+    <body onload="init()">
+        <p>二値化加工</p>
+        画像ファイル：
+        <input type="file" accept="image/*" onChange="loadImage(this)" />
+        <input type="button" value="元の画像に戻す" onclick="drawImage()" />
+        <input type="button" value="画像を保存する" onclick="saveImage()" />
+        <hr />
+        閾値（二値化処理用）：<input type="range" id="t" value="100" min="0" max="255" />
+
+        サイズ：<input type="range" id="size" value="2" min="1" max="10" />
+        <input type="button" value="二値化" onclick="binarization()" />
+        <input type="button" value="ハーフトーン" onclick="halftone()" />
+
+        <hr />
+        <canvas id="image" width="800" height="600"></canvas>
+    </body>
+</html>
